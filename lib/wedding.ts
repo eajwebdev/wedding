@@ -16,17 +16,19 @@ export const wedding = {
   note: "With grateful hearts and the people we love, we begin our forever.",
 } as const;
 
+/** `focus` is where the couple are, as [x, y] from the photo's top-left (0–1). Screens that crop the photo
+ *  (phones for wide shots, desktops for tall ones) keep that point in view instead of the photo's centre. */
 export const scenicImages = [
-  { src: "/images/walking-sunset.jpg", width: 2048, height: 1365 },
-  { src: "/images/forehead-kiss.jpg", width: 1365, height: 2048 },
-  { src: "/images/embrace-sea.jpg", width: 1365, height: 2048 },
-  { src: "/images/close-together.jpg", width: 2048, height: 1365 },
-  { src: "/images/shoulder-embrace.jpg", width: 1365, height: 2048 },
-  { src: "/images/reaching-hands.jpg", width: 1365, height: 2048 },
-  { src: "/images/tender-gaze.jpg", width: 1365, height: 2048 },
-  { src: "/images/carrying-love.jpg", width: 1365, height: 2048 },
-  { src: "/images/shoreline.jpg", width: 1365, height: 2048 },
-]; // prenup-title.jpg is left out: its printed lettering would clash with the page text
+  { src: "/images/walking-sunset.jpg", width: 2048, height: 1365, focus: [0.46, 0.5] },
+  { src: "/images/forehead-kiss.jpg", width: 1365, height: 2048, focus: [0.45, 0.25] },
+  { src: "/images/embrace-sea.jpg", width: 1365, height: 2048, focus: [0.55, 0.33] },
+  { src: "/images/close-together.jpg", width: 2048, height: 1365, focus: [0.6, 0.4] },
+  { src: "/images/shoulder-embrace.jpg", width: 1365, height: 2048, focus: [0.5, 0.42] },
+  { src: "/images/reaching-hands.jpg", width: 1365, height: 2048, focus: [0.5, 0.5] },
+  { src: "/images/tender-gaze.jpg", width: 1365, height: 2048, focus: [0.45, 0.28] },
+  { src: "/images/carrying-love.jpg", width: 1365, height: 2048, focus: [0.55, 0.38] },
+  { src: "/images/shoreline.jpg", width: 1365, height: 2048, focus: [0.5, 0.45] },
+] as { src: string; width: number; height: number; focus: [number, number] }[]; // prenup-title.jpg is left out: its printed lettering would clash with the page text
 
 export const galleryPhotos = [
   { src: "/images/embrace-sea.jpg", alt: "Edwin holding Jochel at the beach", label: "Us" },

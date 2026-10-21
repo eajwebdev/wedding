@@ -104,7 +104,6 @@ export default function Home() {
   // Scroll-linked reveals.
   useEffect(() => {
     gsap.registerPlugin(ScrollTrigger);
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = gsap.context(() => {
       gsap.set(".hero-reveal", { autoAlpha: 0, y: 28, filter: "blur(10px)" });
       gsap.utils.toArray<HTMLElement>(".reveal").forEach((el) => {
@@ -124,7 +123,7 @@ export default function Home() {
           scrollTrigger: { trigger: el, start: "top 65%", end: "bottom 65%", scrub: 0.6 } });
       });
       gsap.utils.toArray<HTMLElement>(".stagger").forEach((group) => {
-        gsap.from(group.children, { autoAlpha: 0, y: 26, duration: 1.1, ease: "expo.out", stagger: 0.09,
+        gsap.from(group.children, { autoAlpha: 0, y: 26, duration: 1.1, ease: "expo.out", stagger: 0.06,
           scrollTrigger: { trigger: group, start: "top 88%", once: true } });
       });
     });
@@ -133,37 +132,50 @@ export default function Home() {
 
   useEffect(() => {
     if (!opened) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!reduced) gsap.to(".hero-reveal", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 1.6, ease: "expo.out", stagger: 0.12, delay: 0.75 });
+    gsap.to(".hero-reveal", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 1.6, ease: "expo.out", stagger: 0.08, delay: 0.75 });
     ScrollTrigger.refresh();
-    const t = window.setTimeout(() => setGateGone(true), reduced ? 0 : 1400);
+    const t = window.setTimeout(() => setGateGone(true), 1400);
     return () => window.clearTimeout(t);
   }, [opened]);
 
   // 3D card tilt that follows the same mouse / gyro input as the WebGL scene.
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const cards = Array.from(document.querySelectorAll<HTMLElement>("[data-tilt]"));
     const visible = new Set<HTMLElement>();
+    let dirty = true;
     const io = new IntersectionObserver((entries) => entries.forEach((e) => {
       if (e.isIntersecting) visible.add(e.target as HTMLElement); else visible.delete(e.target as HTMLElement);
+      dirty = true;
     }));
     cards.forEach((c) => io.observe(c));
     const m = { x: 0, y: 0 };
     let raf = 0;
     const loop = () => {
-      m.x += (scene.current.pointer.x - m.x) * 0.08;
-      m.y += (scene.current.pointer.y - m.y) * 0.08;
-      visible.forEach((c) => {
-        c.style.setProperty("--ry", `${(m.x * 7).toFixed(2)}deg`);
-        c.style.setProperty("--rx", `${(m.y * 5).toFixed(2)}deg`);
-        c.style.setProperty("--gx", `${(50 + m.x * 45).toFixed(1)}%`);
-        c.style.setProperty("--gy", `${(40 - m.y * 40).toFixed(1)}%`);
-      });
+      const dx = scene.current.pointer.x - m.x;
+      const dy = scene.current.pointer.y - m.y;
+      // Write transforms straight onto the card and its glare (a CSS variable on the card would restyle every
+      // child each frame), and only while the tilt is still settling.
+      if (dirty || Math.abs(dx) > 0.0005 || Math.abs(dy) > 0.0005) {
+        dirty = false;
+        m.x += dx * 0.08;
+        m.y += dy * 0.08;
+        visible.forEach((c) => {
+          c.style.transform = `rotateX(${(m.y * 5).toFixed(2)}deg) rotateY(${(m.x * 7).toFixed(2)}deg)`;
+          const glare = c.querySelector<HTMLElement>(".invite-glare");
+          if (glare) glare.style.transform = `translate(${(m.x * 22.5).toFixed(2)}%, ${(-5 - m.y * 20).toFixed(2)}%)`;
+        });
+      }
       raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => { cancelAnimationFrame(raf); io.disconnect(); };
+  }, []);
+
+  // The foil shimmer repaints its text every frame, so it only runs while that text is on screen.
+  useEffect(() => {
+    const io = new IntersectionObserver((entries) => entries.forEach((e) => e.target.classList.toggle("in-view", e.isIntersecting)));
+    document.querySelectorAll(".foil, .foil-dark").forEach((el) => io.observe(el));
+    return () => io.disconnect();
   }, []);
 
   function openInvitation() {

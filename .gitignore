@@ -6,3 +6,6 @@ out
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# SQLite RSVP database (the guest list; back it up, never commit it)
+data/

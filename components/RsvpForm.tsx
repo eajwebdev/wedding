@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { Check, Minus, Plus, Send } from "lucide-react";
 
-type RsvpResult = { state: "idle" | "loading" | "saved" | "demo" | "error"; message: string };
+type RsvpResult = { state: "idle" | "loading" | "saved" | "error"; message: string };
 const MAX_GUESTS = 5;
 
 export default function RsvpForm() {
@@ -34,10 +34,6 @@ export default function RsvpForm() {
       if (response.ok) {
         setResult({ state: "saved", message: attendance === "yes" ? "We can’t wait to celebrate with you!" : "Thank you for letting us know. You’ll be missed." });
         form.reset();
-      } else if (response.status === 503) {
-        // Preview only; never imply responses are delivered without a configured backend.
-        window.localStorage.setItem("ej-wedding-rsvp-demo", JSON.stringify({ ...payload, savedAt: new Date().toISOString() }));
-        setResult({ state: "demo", message: "Preview saved on this device only. Connect Supabase before sharing with guests." });
       } else {
         setResult({ state: "error", message: "We couldn't save your response. Please try again." });
       }

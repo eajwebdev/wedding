@@ -28,6 +28,8 @@ const photoFragment = /* glsl */ `
   uniform sampler2D uImageB;
   uniform vec2 uSizeA;
   uniform vec2 uSizeB;
+  uniform vec2 uFocusA;
+  uniform vec2 uFocusB;
   uniform vec2 uResolution;
   uniform vec2 uPointer;
   uniform float uMix;
@@ -35,13 +37,14 @@ const photoFragment = /* glsl */ `
   uniform float uSegment;
   uniform float uDim;
 
-  vec2 cover(vec2 uv, vec2 size) {
+  vec2 cover(vec2 uv, vec2 size, vec2 focus) {
     float viewport = uResolution.x / max(uResolution.y, 1.0);
     float imageAspect = size.x / max(size.y, 1.0);
     vec2 ratio = vec2(1.0);
     if (viewport > imageAspect) ratio.y = imageAspect / viewport;
     else ratio.x = viewport / imageAspect;
-    return (uv - 0.5) * ratio + 0.5;
+    // Crop around the couple rather than the photo's centre, stopping at the photo's edges.
+    return (uv - 0.5) * ratio + clamp(focus, ratio * 0.5, 1.0 - ratio * 0.5);
   }
 
   float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123); }
@@ -56,14 +59,14 @@ const photoFragment = /* glsl */ `
     return v;
   }
 
-  vec3 samplePhoto(sampler2D tex, vec2 size, vec2 uv, float zoom) {
+  vec3 samplePhoto(sampler2D tex, vec2 size, vec2 focus, vec2 uv, float zoom) {
     // Fake depth: the foreground and the couple move more than the distant sky.
     float foreground = 1.0 - smoothstep(0.1, 0.9, uv.y);
     float subject = exp(-pow((uv.x - 0.5) * 2.6, 2.0) - pow((uv.y - 0.45) * 2.6, 2.0));
     float depth = 0.15 + 0.5 * foreground + 0.35 * subject;
     vec2 p = (uv - 0.5) / zoom + 0.5 + uPointer * 0.022 * depth;
     p.x += sin(uv.y * 8.0 + uTime * 0.35) * 0.0012 * foreground;
-    return texture2D(tex, clamp(cover(p, size), 0.001, 0.999)).rgb;
+    return texture2D(tex, clamp(cover(p, size, focus), 0.001, 0.999)).rgb;
   }
 
   void main() {
@@ -71,8 +74,8 @@ const photoFragment = /* glsl */ `
     // Slow Ken Burns push on each photograph; the incoming one starts slightly wider.
     float zoomA = 1.06 + uMix * 0.05;
     float zoomB = 1.12 - uMix * 0.06;
-    vec3 a = samplePhoto(uImageA, uSizeA, uv, zoomA);
-    vec3 b = samplePhoto(uImageB, uSizeB, uv, zoomB);
+    vec3 a = samplePhoto(uImageA, uSizeA, uFocusA, uv, zoomA);
+    vec3 b = samplePhoto(uImageB, uSizeB, uFocusB, uv, zoomB);
 
     // Silk dissolve: an organic noise front sweeps across with a thin champagne edge.
     float n = fbm(uv * 3.2 + uSegment * 7.13 + uTime * 0.03);
@@ -201,7 +204,6 @@ export default function CinematicCanvas({ state, onReady }: Props) {
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const isPhone = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
     let renderer: THREE.WebGLRenderer;
     try {
@@ -240,10 +242,13 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       tex.generateMipmaps = false;
       return tex;
     });
+    // Texture v runs bottom-up, so the focus y (measured from the photo's top) is flipped.
+    const focusOf = (i: number) => new THREE.Vector2(scenicImages[i].focus[0], 1 - scenicImages[i].focus[1]);
     const photoUniforms = {
       uImageA: { value: textures[0] }, uImageB: { value: textures[1] },
       uSizeA: { value: new THREE.Vector2(scenicImages[0].width, scenicImages[0].height) },
       uSizeB: { value: new THREE.Vector2(scenicImages[1].width, scenicImages[1].height) },
+      uFocusA: { value: focusOf(0) }, uFocusB: { value: focusOf(1) },
       uResolution: { value: new THREE.Vector2(1, 1) },
       uPointer: { value: new THREE.Vector2() },
       uMix: { value: 0 }, uTime: { value: 0 }, uSegment: { value: 0 }, uDim: { value: 1 },
@@ -385,7 +390,7 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       if (!visibleDoc) return;
       const s = state.current!;
       if (s.covered && !firstFrame) { frame = requestAnimationFrame(loop); return; }
-      const t = reduced ? 0 : clock.getElapsedTime();
+      const t = clock.getElapsedTime();
       const progress = Math.max(0, Math.min(0.999999, s.progress));
 
       // Photos crossfade across the scroll; each holds, then dissolves over the last ~40% of its scene.
@@ -397,6 +402,8 @@ export default function CinematicCanvas({ state, onReady }: Props) {
         photoUniforms.uImageB.value = textures[segment + 1];
         photoUniforms.uSizeA.value.set(scenicImages[segment].width, scenicImages[segment].height);
         photoUniforms.uSizeB.value.set(scenicImages[segment + 1].width, scenicImages[segment + 1].height);
+        photoUniforms.uFocusA.value.copy(focusOf(segment));
+        photoUniforms.uFocusB.value.copy(focusOf(segment + 1));
         photoUniforms.uSegment.value = segment;
         lastSegment = segment;
       }
@@ -405,7 +412,7 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       const dimTarget = s.opened ? 0.64 + 0.24 * (1 - s.heroFade) : 0.9;
       photoUniforms.uDim.value = THREE.MathUtils.lerp(photoUniforms.uDim.value, dimTarget, 0.06);
 
-      const ease = reduced ? 1 : 0.045;
+      const ease = 0.045;
       motion.x += (s.pointer.x - motion.x) * ease;
       motion.y += (s.pointer.y - motion.y) * ease;
       photoUniforms.uPointer.value.set(motion.x, motion.y);
@@ -418,12 +425,12 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       // Medallion follows its placeholder, with an inertial glide between gate and hero.
       const onScreen = anchor();
       if (!placed && targetScale > 0 && onScreen) { medallion.position.copy(target); medallion.scale.setScalar(targetScale); placed = true; }
-      const glide = reduced ? 1 : 0.12;
+      const glide = 0.12;
       medallion.position.lerp(target, glide);
       const sc = THREE.MathUtils.lerp(medallion.scale.x, targetScale, glide);
       medallion.scale.setScalar(sc);
       const sinceOpen = s.opened ? (performance.now() - s.openedAt) / 2200 : 0;
-      const spin = s.opened && !reduced ? (1 - Math.pow(1 - Math.min(sinceOpen, 1), 4)) * Math.PI * 2 : 0;
+      const spin = s.opened ? (1 - Math.pow(1 - Math.min(sinceOpen, 1), 4)) * Math.PI * 2 : 0;
       // Turns in place around its own centre and always settles facing the guest; sway kept small so it never looks skewed.
       const sway = s.opened ? Math.min(sinceOpen, 1) : 1; // no sway while the opening spin plays
       medallion.rotation.y = spin + (Math.sin(t * 0.5) * 0.06 + motion.x * 0.1) * sway;

@@ -115,7 +115,6 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
     const host = mount.current;
     const wrap = section.current;
     if (!host || !wrap) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const isPhone = window.matchMedia("(max-width: 760px), (pointer: coarse)").matches;
     let renderer: THREE.WebGLRenderer;
     try {
@@ -347,7 +346,7 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
       if (state.current) state.current.covered = rect.top <= 0 && rect.bottom >= window.innerHeight;
       const travel = Math.max(rect.height - window.innerHeight, 1);
       const p = THREE.MathUtils.clamp(-rect.top / travel, 0, 1);
-      flight += ((reduced ? 1 : p) - flight) * 0.08;
+      flight += (p - flight) * 0.08;
       const f = THREE.MathUtils.smootherstep(flight, 0, 1);
 
       let bank = 0;
@@ -371,7 +370,7 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
         target.lerpVectors(centre, landLook, v);
         bank = Math.sin(v * Math.PI) * 0.06;
       }
-      const hover = reduced ? 0 : (1 - f * 0.7);
+      const hover = 1 - f * 0.7;
       pos.y += Math.sin(t * 0.9) * 0.05 * hover;           // drone hover drift
       pos.x += Math.sin(t * 0.6) * 0.04 * hover;
       camera.position.copy(pos);
@@ -388,14 +387,14 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
         aperture = THREE.MathUtils.lerp(THREE.MathUtils.lerp(0.65, 1.3, v), 0.2, pull);
       }
       focus.uFocus.value = focusAt;
-      focus.uAperture.value = reduced ? 0 : aperture;
+      focus.uAperture.value = aperture;
 
       const currentMove = f < phases[1] ? 0 : f < phases[2] ? 1 : f < 0.985 ? 2 : 3;
       if (currentMove !== lastMove) { lastMove = currentMove; setMove(currentMove); }
 
       // Ring holds still while the camera orbits, then belongs to the guest (drag, arrows, tilt) with idle auto-turn.
       const idle = performance.now() - lastInput > 4000 && !drag.active;
-      if (idle && !reduced && f > 0.98) rot.target += 0.0018;
+      if (idle && f > 0.98) rot.target += 0.0018;
       rot.value += (rot.target - rot.value) * 0.09;
       const tilt = state.current?.pointer.x ?? 0;
       ring.rotation.y = reflection.rotation.y = rot.value + tilt * 0.25;

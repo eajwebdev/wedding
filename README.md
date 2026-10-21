@@ -32,7 +32,7 @@ Edit **`lib/wedding.ts`** to provide the wedding date, time, ceremony/reception 
 - **`components/Gallery360.tsx`** — **360° photo ring** filmed as one scroll-driven shot: **Drone fly** (aerial approach) → **Orbit 360°** (a full circle around the ring) → dive over the rim → **Focus pull** (focus racks from the fireflies at the lens onto the first photo; depth of field is done with mip-level blur, no post-processing). A badge names each move as it plays. Guests then drag, tilt or use the arrows to look around 360°, and tap a photo to open it full screen. Falls back to a swipeable coverflow (`Gallery.tsx`) without WebGL.
 - GSAP ScrollTrigger split-word title reveals, 3D tilt + glare on the invitation card. No menus: the invitation is one continuous scroll.
 - Honest note: the source photos are ordinary stills, so the 360° and drone effects are a 3D presentation of those stills, not real aerial or panoramic footage. To use a **real 360° photo** (e.g. a drone or 360-camera panorama, 2:1 equirectangular), put it in `public/images/` and set `panoramaSrc` in `lib/wedding.ts`; it becomes the environment around the 3D gallery.
-- `prefers-reduced-motion` is respected; a static photo + flat logo show if WebGL is unavailable.
+- Effects play for every viewer, including devices set to reduce motion (an owner decision). A static photo + flat logo show if WebGL is unavailable.
 
 ## Logo and photos
 
@@ -41,22 +41,29 @@ Edit **`lib/wedding.ts`** to provide the wedding date, time, ceremony/reception 
 
 ## RSVP data storage
 
-By default, without Supabase credentials, RSVPs are **demo-only** and saved on the submitting device (browser localStorage). The UI explicitly says responses are not sent anywhere. Do not use the prototype publicly for collecting responses until the backend is configured.
+RSVPs are saved in a **SQLite** file, `data/rsvps.db`, created automatically on the first reply (`lib/db.ts`). The folder is git-ignored. **Back this file up**: it is your guest list.
 
-To accept real RSVPs:
+**See the guest list:** open **`/admin`** (e.g. http://localhost:3000/admin) and sign in. You'll see every reply (name, attending or declined, number of guests, message, time received) plus totals.
 
-1. Create a Supabase project, run **`supabase-schema.sql`** in its SQL editor.
-2. Copy `.env.example` to `.env.local` and set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` **server-side only** (never prefix secrets with `NEXT_PUBLIC_`).
-3. Restart the server. `app/api/rsvp/route.ts` will submit validated responses to Supabase via server-side API. Inspect the `wedding_rsvps` table to see responses.
+The admin login lives in **`.env.local`** (git-ignored; see `.env.example`):
 
-Before launch, consider adding bot/rate limits, specific guest allowance checks, privacy notice and notification workflow. Current form lets guests choose up to five attendees; adjust this per your invitations.
+- `ADMIN_USERNAME`, `ADMIN_PASSWORD`: the sign-in. Change the password to a strong one before sharing the site publicly.
+- `SESSION_SECRET`: a random 32+ character string that signs the login cookie. Changing it signs everyone out.
+
+Restart the server after editing `.env.local`. Sessions last 7 days; five wrong passwords lock that address out for 15 minutes.
+
+**Hosting:** SQLite needs a server with a persistent disk (a VPS, Railway or Render with a volume, or a home server). It will **not** keep data on Vercel or Netlify, whose filesystems are wiped between requests.
+
+The form lets guests choose up to five attendees; adjust `MAX_GUESTS` in `components/RsvpForm.tsx` and the check in `app/api/rsvp/route.ts` together.
 
 ## Files
 
 - `/app/page.tsx` — scenes, wedding details, gallery, countdown, RSVP
 - `/app/globals.css` — editorial coastal styling and mobile layout
 - `/components/CinematicCanvas.tsx` — actual Three.js renderer + shader
-- `/app/api/rsvp/route.ts` — optional protected RSVP API
+- `/app/api/rsvp/route.ts` — RSVP API (validates and saves to SQLite)
+- `/app/admin/` — password-protected guest list
+- `/lib/db.ts`, `/lib/auth.ts` — SQLite storage and admin login
 - `/lib/wedding.ts` — editable wedding information and photo order
 - `/public/images/` — supplied original photo assets and logo
 
