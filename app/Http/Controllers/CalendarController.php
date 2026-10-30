@@ -1,0 +1,47 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use Carbon\CarbonImmutable;
+use Illuminate\Http\Response;
+
+class CalendarController extends Controller
+{
+    /** A real .ics response opens the native add-event screen on Apple devices. */
+    public function __invoke(): Response
+    {
+        $start = CarbonImmutable::parse(config('wedding.date'))->utc();
+        $end = $start->addMinutes((int) config('wedding.calendar_duration_minutes'));
+        $stamp = fn (CarbonImmutable $date): string => $date->format('Ymd\\THis\\Z');
+        $escape = fn (string $value): string => str_replace(
+            ["\\", ";", ",", "\r\n", "\r", "\n"],
+            ["\\\\", "\\;", "\\,", "\\n", "\\n", "\\n"],
+            $value,
+        );
+
+        $lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//Edwin & Jochel//Wedding Invitation//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'BEGIN:VEVENT',
+            'UID:edwin-jochel-wedding@wedding.eajwebdev.com',
+            'DTSTAMP:20261030T000000Z',
+            'DTSTART:'.$stamp($start),
+            'DTEND:'.$stamp($end),
+            'SUMMARY:'.$escape(config('wedding.calendar_title')),
+            'DESCRIPTION:'.$escape(config('wedding.calendar_description').' '.route('home')),
+            'LOCATION:'.$escape(config('wedding.venue')),
+            'STATUS:CONFIRMED',
+            'END:VEVENT',
+            'END:VCALENDAR',
+        ];
+
+        return response(implode("\r\n", $lines)."\r\n", 200, [
+            'Content-Type' => 'text/calendar; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="edwin-jochel-wedding.ics"',
+            'Cache-Control' => 'public, max-age=86400',
+        ]);
+    }
+}

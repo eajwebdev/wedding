@@ -19,22 +19,31 @@ const Gallery360 = lazy(() => import("@/components/Gallery360"));
 
 const clamp = (v: number, min = -1, max = 1) => Math.min(max, Math.max(min, v));
 
-function downloadCalendar() {
+function addToCalendar() {
   const start = new Date(wedding.dateISO);
   if (Number.isNaN(start.getTime())) return;
   const end = new Date(start.getTime() + 6.5 * 3600000); // 3:00 PM ceremony to just after the 9:00 PM closing remarks
-  const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-  const esc = (s: string) => s.replace(/([,;\\])/g, "\\$1");
-  const ics = [
-    "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Edwin & Jochel//Wedding//EN", "BEGIN:VEVENT",
-    "UID:edwin-jochel-wedding@invitation", `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
-    `SUMMARY:${esc(`${wedding.names.first} & ${wedding.names.second}'s Wedding`)}`,
-    `LOCATION:${esc(wedding.venueAddress ? `${wedding.venueName}, ${wedding.venueAddress}` : wedding.ceremonyVenue)}`, "END:VEVENT", "END:VCALENDAR",
-  ].join("\r\n");
-  const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
-  const a = Object.assign(document.createElement("a"), { href: url, download: "edwin-jochel-wedding.ics" });
-  a.click();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  const isApple = /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent)
+    || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
+  if (isApple) {
+    window.location.assign("/edwin-jochel-wedding.ics");
+    return;
+  }
+
+  const stamp = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const location = wedding.venueAddress
+    ? `${wedding.venueName}, ${wedding.venueAddress}`
+    : wedding.ceremonyVenue;
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `${wedding.names.first} & ${wedding.names.second}'s Wedding`,
+    dates: `${stamp(start)}/${stamp(end)}`,
+    details: `Celebrate with us. Wedding invitation: ${window.location.origin}`,
+    location,
+    ctz: "Asia/Manila",
+  });
+  window.location.assign(`https://calendar.google.com/calendar/render?${params.toString()}`);
 }
 
 export default function Home() {
@@ -324,7 +333,7 @@ export default function Home() {
             {(wedding.venueAddress || wedding.dateISO) && (
               <div className="invite-actions">
                 {wedding.venueAddress && <a className="outline-button" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${wedding.venueName}, ${wedding.venueAddress}`)}`}><MapPin size={16} /> Directions</a>}
-                {wedding.dateISO && <button type="button" className="outline-button" onClick={downloadCalendar}><CalendarPlus size={16} /> Add to calendar</button>}
+                {wedding.dateISO && <button type="button" className="outline-button" onClick={addToCalendar}><CalendarPlus size={16} /> Add to calendar</button>}
               </div>
             )}
             <p className="paper-end">We cannot wait to share our special day with you.</p>

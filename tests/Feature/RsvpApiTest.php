@@ -77,4 +77,17 @@ class RsvpApiTest extends TestCase
     {
         $this->get('/no-such-page')->assertNotFound();
     }
+
+    public function test_calendar_download_is_a_prefilled_wedding_event(): void
+    {
+        $response = $this->get('/edwin-jochel-wedding.ics')
+            ->assertOk()
+            ->assertHeader('content-type', 'text/calendar; charset=utf-8')
+            ->assertHeader('content-disposition', 'attachment; filename="edwin-jochel-wedding.ics"');
+
+        $response->assertSee('DTSTART:20261226T070000Z', false)
+            ->assertSee('DTEND:20261226T133000Z', false)
+            ->assertSee("SUMMARY:Edwin & Jochel's Wedding", false)
+            ->assertSee('LOCATION:AC Villa Private Resort\\, North Poblacion\\, Mabinay\\, Negros Oriental', false);
+    }
 }

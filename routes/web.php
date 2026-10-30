@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CalendarController;
 use App\Http\Controllers\RsvpController;
 use App\Http\Middleware\EnsureAdmin;
 use Illuminate\Support\Facades\Route;
 
 // Laravel serves one Blade shell; Vite mounts the React invitation or admin application into it.
 Route::view('/', 'app', ['page' => 'home'])->name('home');
+Route::get('/edwin-jochel-wedding.ics', CalendarController::class)->name('calendar.download');
 Route::view('/admin', 'app', ['page' => 'admin'])->name('admin');
 
 Route::prefix('api')->group(function () {
