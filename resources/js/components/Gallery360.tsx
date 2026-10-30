@@ -287,7 +287,7 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
 
     /* Drag / tap */
     const rot = { value: 0, target: 0, velocity: 0 };
-    const drag = { active: false, x: 0, startX: 0, startY: 0, moved: 0, time: 0 };
+    const drag = { active: false, engaged: false, x: 0, startX: 0, startY: 0, moved: 0, time: 0 };
     const raycaster = new THREE.Raycaster();
     const ndc = new THREE.Vector2();
     const canvas = renderer.domElement;
@@ -295,15 +295,23 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
     control.current.go = (dir: number) => { rot.target = Math.round(rot.target / slot) * slot + dir * slot; lastInput = performance.now(); };
     let lastInput = 0;
     const onDown = (e: PointerEvent) => {
-      drag.active = true; drag.x = drag.startX = e.clientX; drag.startY = e.clientY; drag.moved = 0; drag.time = performance.now();
+      drag.active = true; drag.engaged = e.pointerType === "mouse";
+      drag.x = drag.startX = e.clientX; drag.startY = e.clientY; drag.moved = 0; drag.time = performance.now();
       lastInput = performance.now();
     };
     const onMove = (e: PointerEvent) => {
       if (!drag.active) return;
-      const dx = e.clientX - drag.x;
+      const ox = Math.abs(e.clientX - drag.startX);
+      const oy = Math.abs(e.clientY - drag.startY);
+      drag.moved = Math.max(drag.moved, ox, oy);
+      // A finger scrolling the page drifts sideways too: only turn the ring once the swipe is clearly horizontal.
+      if (!drag.engaged) {
+        if (ox < 12 || ox < oy * 1.3) return;
+        drag.engaged = true;
+        drag.x = e.clientX;
+      }
+      rot.target -= (e.clientX - drag.x) * (Math.PI * 1.4) / width;
       drag.x = e.clientX;
-      drag.moved = Math.max(drag.moved, Math.abs(e.clientX - drag.startX), Math.abs(e.clientY - drag.startY));
-      rot.target -= dx * (Math.PI * 1.4) / width;
       lastInput = performance.now();
     };
     const onUp = (e: PointerEvent) => {
@@ -315,12 +323,17 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
         raycaster.setFromCamera(ndc, camera);
         const hit = raycaster.intersectObjects(pickables, false)[0];
         if (hit) setViewer(hit.object.userData.index as number);
-      } else snap();
+      } else if (drag.engaged) snap();
+    };
+    // The browser took the gesture over as a page scroll: neither a tap nor a turn.
+    const onCancel = () => {
+      if (drag.active && drag.engaged) snap();
+      drag.active = false;
     };
     canvas.addEventListener("pointerdown", onDown);
     window.addEventListener("pointermove", onMove, { passive: true });
     window.addEventListener("pointerup", onUp);
-    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("pointercancel", onCancel);
 
     let inView = false;
     const io = new IntersectionObserver(([entry]) => {
@@ -417,7 +430,7 @@ export default function Gallery360({ photos, state, panoramaSrc }: Props) {
       canvas.removeEventListener("pointerdown", onDown);
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
-      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("pointercancel", onCancel);
       disposables.forEach((d) => d.dispose());
       renderer.dispose();
       canvas.remove();

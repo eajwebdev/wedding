@@ -425,11 +425,12 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       // Medallion follows its placeholder, with an inertial glide between gate and hero.
       const onScreen = anchor();
       if (!placed && targetScale > 0 && onScreen) { medallion.position.copy(target); medallion.scale.setScalar(targetScale); placed = true; }
-      const glide = 0.12;
+      const sinceOpen = s.opened ? (performance.now() - s.openedAt) / 2200 : 0;
+      // Glides only for the gate → hero move; after that it sits on its placeholder, or it trails the page while scrolling.
+      const glide = sinceOpen >= 1 ? 1 : 0.12;
       medallion.position.lerp(target, glide);
       const sc = THREE.MathUtils.lerp(medallion.scale.x, targetScale, glide);
       medallion.scale.setScalar(sc);
-      const sinceOpen = s.opened ? (performance.now() - s.openedAt) / 2200 : 0;
       const spin = s.opened ? (1 - Math.pow(1 - Math.min(sinceOpen, 1), 4)) * Math.PI * 2 : 0;
       // Turns in place around its own centre and always settles facing the guest; sway kept small so it never looks skewed.
       const sway = s.opened ? Math.min(sinceOpen, 1) : 1; // no sway while the opening spin plays
