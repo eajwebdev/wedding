@@ -10,13 +10,31 @@
     @if ($page === 'admin')
         <meta name="robots" content="noindex,nofollow">
     @else
+        @php
+            $siteUrl = rtrim(config('app.url'), '/');
+            $previewImage = $siteUrl.'/opengraph-image.jpg?v=20261030';
+            $previewTitle = 'Edwin & Jochel | Our Wedding';
+            $previewDescription = "You're invited to celebrate with us on Saturday, December 26, 2026 at AC Villa Private Resort.";
+        @endphp
         <meta name="description" content="You're invited to Edwin and Jochel's wedding on Saturday, December 26, 2026 at AC Villa Private Resort.">
+        <link rel="canonical" href="{{ $siteUrl }}/">
         <meta property="og:type" content="website">
-        <meta property="og:title" content="Edwin & Jochel | Our Wedding">
-        <meta property="og:description" content="Tap to open our invitation and RSVP.">
-        <meta property="og:image" content="{{ asset('opengraph-image.jpg') }}">
-        <meta property="og:url" content="{{ url()->current() }}">
+        <meta property="og:locale" content="en_PH">
+        <meta property="og:site_name" content="Edwin & Jochel's Wedding">
+        <meta property="og:title" content="{{ $previewTitle }}">
+        <meta property="og:description" content="{{ $previewDescription }}">
+        <meta property="og:url" content="{{ $siteUrl }}/">
+        <meta property="og:image" content="{{ $previewImage }}">
+        <meta property="og:image:secure_url" content="{{ $previewImage }}">
+        <meta property="og:image:type" content="image/jpeg">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+        <meta property="og:image:alt" content="Wedding invitation for Edwin and Jochel on December 26, 2026">
         <meta name="twitter:card" content="summary_large_image">
+        <meta name="twitter:title" content="{{ $previewTitle }}">
+        <meta name="twitter:description" content="{{ $previewDescription }}">
+        <meta name="twitter:image" content="{{ $previewImage }}">
+        <meta name="twitter:image:alt" content="Wedding invitation for Edwin and Jochel on December 26, 2026">
     @endif
     <link rel="icon" href="{{ asset('icon.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('apple-icon.png') }}">
