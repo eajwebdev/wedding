@@ -1,8 +1,10 @@
 "use server";
 
 import { cookies, headers } from "next/headers";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { checkCredentials, newSessionToken, SESSION_COOKIE, SESSION_DAYS } from "@/lib/auth";
+import { checkCredentials, isAdmin, newSessionToken, SESSION_COOKIE, SESSION_DAYS } from "@/lib/auth";
+import { createInvite, deleteInvite, deleteRsvp, MAX_INVITE_SEATS } from "@/lib/db";
 
 export type LoginState = { error: string; username: string }; // username refills the field after a failed try
 
@@ -42,4 +44,39 @@ export async function login(_prev: LoginState, form: FormData): Promise<LoginSta
 export async function logout() {
   (await cookies()).delete({ name: SESSION_COOKIE, path: "/admin" });
   redirect("/admin");
+}
+
+// Every guest-list change re-checks the session: server actions are public endpoints.
+async function requireAdmin() {
+  if (!(await isAdmin())) redirect("/admin");
+}
+
+export type InviteState = { error: string; ok: number }; // ok counts successes so the form can clear itself
+
+export async function addInvite(prev: InviteState, form: FormData): Promise<InviteState> {
+  await requireAdmin();
+  const name = String(form.get("name") ?? "").trim().replace(/\s+/g, " ");
+  const seats = Number(form.get("seats"));
+  if (name.length < 2 || name.length > 100) return { ...prev, error: "Enter the guest's name (2 to 100 characters)." };
+  if (!Number.isInteger(seats) || seats < 1 || seats > MAX_INVITE_SEATS) return { ...prev, error: `Seats must be 1 to ${MAX_INVITE_SEATS}.` };
+  try {
+    await createInvite(name, seats);
+  } catch (err) {
+    console.error("Wedding RSVP: could not create invite", err);
+    return { ...prev, error: "Could not save the invite. Check the database connection." };
+  }
+  revalidatePath("/admin");
+  return { error: "", ok: prev.ok + 1 };
+}
+
+export async function removeInvite(form: FormData) {
+  await requireAdmin();
+  await deleteInvite(Number(form.get("id")));
+  revalidatePath("/admin");
+}
+
+export async function removeRsvp(form: FormData) {
+  await requireAdmin();
+  await deleteRsvp(Number(form.get("id")));
+  revalidatePath("/admin");
 }

@@ -1,9 +1,9 @@
-import { Cake, Camera, Church, DoorOpen, Moon, Music, Sparkles, UtensilsCrossed, Wine, type LucideIcon } from "lucide-react";
+import { Cake, Camera, Car, Gem, HeartHandshake, MessageCircleHeart, Mic, Music, Puzzle, Trophy, UtensilsCrossed, Wine, type LucideIcon } from "lucide-react";
 import { program } from "@/lib/wedding";
 
 const icons: Record<(typeof program)[number]["icon"], LucideIcon> = {
-  door: DoorOpen, church: Church, camera: Camera, wine: Wine, sparkles: Sparkles,
-  utensils: UtensilsCrossed, music: Music, cake: Cake, moon: Moon,
+  rings: Gem, car: Car, mic: Mic, heart: HeartHandshake, utensils: UtensilsCrossed, cake: Cake,
+  music: Music, puzzle: Puzzle, message: MessageCircleHeart, trophy: Trophy, camera: Camera, wine: Wine,
 };
 
 /** Vertical program; page.tsx draws the gold line down it as the guest scrolls. */
@@ -16,11 +16,10 @@ export default function ProgramTimeline() {
           const Icon = icons[item.icon];
           return (
             <li key={item.time + item.title} className="timeline-item reveal">
-              <time className="timeline-time">{item.time}</time>
+              {item.time && <time className="timeline-time">{item.time}</time>}
               <span className="timeline-node" aria-hidden="true"><Icon size={17} strokeWidth={1.4} /></span>
               <div className="timeline-body glass">
                 <h3>{item.title}</h3>
-                <p>{item.detail}</p>
               </div>
             </li>
           );

@@ -46,7 +46,7 @@ export default function Gallery({ photos }: { photos: readonly Photo[] }) {
 
   return (
     <div className="coverflow">
-      <div className="cf-track" ref={track} role="list" aria-label="Photo gallery — swipe to browse">
+      <div className="cf-track" ref={track} role="list" aria-label="Photo gallery, swipe to browse">
         {photos.map((photo, i) => (
           <div className="cf-item" role="listitem" key={photo.src}>
             <button type="button" className="cf-card" aria-label={`View photo: ${photo.alt}`}

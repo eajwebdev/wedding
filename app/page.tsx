@@ -5,17 +5,18 @@ import dynamic from "next/dynamic";
 import { gsap } from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import {
-  ArrowDown, CalendarDays, CalendarPlus, Church, Heart, MailOpen, MapPin,
+  ArrowDown, CalendarDays, CalendarPlus, Check, Church, Copy, Heart, MailOpen, MapPin,
   Shirt, Sparkles, Volume2, VolumeX, Wine,
 } from "lucide-react";
 import { galleryPhotos, wedding } from "@/lib/wedding";
 import type { SceneState } from "@/components/CinematicCanvas";
 import SplitTitle from "@/components/SplitTitle";
 import Countdown from "@/components/Countdown";
-import RsvpForm from "@/components/RsvpForm";
+import RsvpForm, { type InviteInfo } from "@/components/RsvpForm";
 import ProgramTimeline from "@/components/ProgramTimeline";
 import ColorMotif from "@/components/ColorMotif";
 import GiftGuide from "@/components/GiftGuide";
+import GuestNotes from "@/components/GuestNotes";
 
 const CinematicCanvas = dynamic(() => import("@/components/CinematicCanvas"), { ssr: false });
 const Gallery360 = dynamic(() => import("@/components/Gallery360"), { ssr: false, loading: () => <div className="g360" /> });
@@ -25,14 +26,14 @@ const clamp = (v: number, min = -1, max = 1) => Math.min(max, Math.max(min, v));
 function downloadCalendar() {
   const start = new Date(wedding.dateISO);
   if (Number.isNaN(start.getTime())) return;
-  const end = new Date(start.getTime() + 5 * 3600000);
+  const end = new Date(start.getTime() + 6.5 * 3600000); // 3:00 PM ceremony to just after the 9:00 PM closing remarks
   const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
   const esc = (s: string) => s.replace(/([,;\\])/g, "\\$1");
   const ics = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Edwin & Jochel//Wedding//EN", "BEGIN:VEVENT",
     "UID:edwin-jochel-wedding@invitation", `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(start)}`, `DTEND:${stamp(end)}`,
     `SUMMARY:${esc(`${wedding.names.first} & ${wedding.names.second}'s Wedding`)}`,
-    `LOCATION:${esc(wedding.venueAddress || wedding.ceremonyVenue)}`, "END:VEVENT", "END:VCALENDAR",
+    `LOCATION:${esc(wedding.venueAddress ? `${wedding.venueName}, ${wedding.venueAddress}` : wedding.ceremonyVenue)}`, "END:VEVENT", "END:VCALENDAR",
   ].join("\r\n");
   const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
   const a = Object.assign(document.createElement("a"), { href: url, download: "edwin-jochel-wedding.ics" });
@@ -44,12 +45,31 @@ export default function Home() {
   const scene = useRef<SceneState>({ progress: 0, heroFade: 0, opened: false, openedAt: 0, pointer: { x: 0, y: 0 }, covered: false });
   const progressBar = useRef<HTMLDivElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
+  const autoOpen = useRef(false);
   const [ready, setReady] = useState(false);
   const [opened, setOpened] = useState(false);
   const [gateGone, setGateGone] = useState(false);
   const [tilt, setTilt] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [invite, setInvite] = useState<InviteInfo | null>(null);
+  const [copied, setCopied] = useState(false);
   const onReady = useCallback(() => setReady(true), []);
+
+  // A personal link (/?invite=CODE) fills in the guest's name and seats.
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("invite");
+    if (!code) return;
+    fetch(`/api/invite?code=${encodeURIComponent(code)}`).then((r) => (r.ok ? r.json() : null)).then((data) => data && setInvite(data)).catch(() => {});
+  }, []);
+
+  // Guests coming back (same tab session) or following a link to a section skip the opening gate.
+  useEffect(() => {
+    try { autoOpen.current = sessionStorage.getItem("ej-opened") === "1"; } catch {}
+    if (document.getElementById(window.location.hash.slice(1) || "-")) autoOpen.current = true;
+  }, []);
+  useEffect(() => {
+    if (ready && autoOpen.current) openInvitation(true);
+  }, [ready]);
 
   // Scroll → progress bar and the 3D scene.
   useEffect(() => {
@@ -134,6 +154,8 @@ export default function Home() {
     if (!opened) return;
     gsap.to(".hero-reveal", { autoAlpha: 1, y: 0, filter: "blur(0px)", duration: 1.6, ease: "expo.out", stagger: 0.08, delay: 0.75 });
     ScrollTrigger.refresh();
+    const target = document.getElementById(window.location.hash.slice(1) || "-");
+    if (target) window.scrollTo({ top: target.getBoundingClientRect().top + window.scrollY, behavior: "instant" });
     const t = window.setTimeout(() => setGateGone(true), 1400);
     return () => window.clearTimeout(t);
   }, [opened]);
@@ -178,13 +200,15 @@ export default function Home() {
     return () => io.disconnect();
   }, []);
 
-  function openInvitation() {
+  /** `auto`: opened without a tap (returning guest), so skip what browsers only allow from a tap. */
+  function openInvitation(auto = false) {
     // iOS only grants motion sensors from inside a tap, so ask first.
     const DOE = (typeof DeviceOrientationEvent !== "undefined" ? DeviceOrientationEvent : undefined) as unknown as
       { requestPermission?: () => Promise<"granted" | "denied"> } | undefined;
-    if (DOE?.requestPermission) DOE.requestPermission().then((r) => r === "granted" && setTilt(true)).catch(() => {});
+    if (DOE?.requestPermission) { if (!auto) DOE.requestPermission().then((r) => r === "granted" && setTilt(true)).catch(() => {}); }
     else if (DOE) setTilt(true);
-    if (audio.current) audio.current.play().then(() => setPlaying(true)).catch(() => {});
+    if (audio.current && !auto) audio.current.play().then(() => setPlaying(true)).catch(() => {});
+    try { sessionStorage.setItem("ej-opened", "1"); } catch {}
     window.scrollTo(0, 0);
     scene.current.opened = true;
     scene.current.openedAt = performance.now();
@@ -198,6 +222,13 @@ export default function Home() {
     else { el.pause(); setPlaying(false); }
   }
 
+  function copyHashtag() {
+    navigator.clipboard?.writeText(wedding.hashtag).then(() => {
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  }
+
 
   return <main className={`wedding-site ${opened ? "is-open" : "is-gated"}`}>
     <div className="cinema-photo-fallback" aria-hidden="true" />
@@ -208,14 +239,15 @@ export default function Home() {
     {!gateGone && (
       <div className="intro-gate" aria-hidden={opened}>
         <div className="gate-inner">
+          {invite && <p className="gate-guest">Dear {invite.name},</p>}
           <p className="eyebrow">You are cordially invited</p>
           <div className="gate-medallion" data-medallion="gate">
             <img className="medallion-fallback" src="/images/ej-logo-512.png" alt="" />
             <span className="medallion-halo" aria-hidden="true" />
           </div>
           <p className="gate-names">{wedding.names.first} <em>&</em> {wedding.names.second}</p>
-          <p className="gate-sub">Together with their families</p>
-          <button type="button" className="gold-button gate-button" onClick={openInvitation} disabled={!ready || opened}>
+          <p className="gate-sub">request the pleasure of your company</p>
+          <button type="button" className="gold-button gate-button" onClick={() => openInvitation()} disabled={!ready || opened}>
             {ready ? <><MailOpen size={18} strokeWidth={1.5} /> <span>Open invitation</span></> : <span className="loading-dots">Preparing</span>}
           </button>
           <p className="gate-hint"><Sparkles size={13} strokeWidth={1.5} /> {wedding.musicSrc ? "Turn your sound on · tilt your phone" : "Tilt your phone to feel the depth"}</p>
@@ -251,7 +283,7 @@ export default function Home() {
           <p className="eyebrow reveal">Chapter one · Our story</p>
           <SplitTitle className="display-title" lines={["Some stories", "feel like *fate.*"]} />
           <div className="fine-line reveal" />
-          <p className="scene-description reveal">Among a thousand beautiful moments, we found our favorite place — right beside each other.</p>
+          <p className="scene-description reveal">Among a thousand beautiful moments, we found our favorite place, right beside each other.</p>
         </div>
       </section>
 
@@ -261,7 +293,7 @@ export default function Home() {
           <p className="eyebrow reveal">Chapter two · The promise</p>
           <SplitTitle className="display-title" lines={["In every tide,", "*I'll find you.*"]} />
           <div className="fine-line reveal" />
-          <p className="scene-description reveal">Through every season, every sunrise, and every road ahead — we choose each other.</p>
+          <p className="scene-description reveal">Through every season, every sunrise, and every road ahead, we choose each other.</p>
         </div>
       </section>
 
@@ -279,18 +311,23 @@ export default function Home() {
             <span className="invite-glare" aria-hidden="true" />
             <img className="invite-seal" src="/images/ej-logo-512.png" alt="" aria-hidden="true" />
             <p className="eyebrow dark">To our beloved family & friends</p>
-            <h2 className="invite-title">Together with our families, we joyfully invite you to celebrate the wedding of</h2>
+            <h2 className="invite-title">With joyful hearts, we invite you to celebrate our wedding</h2>
             <p className="invite-names foil-dark">{wedding.names.first} <span>&</span> {wedding.names.second}</p>
             <div className="paper-divider" aria-hidden="true"><span />✦<span /></div>
             <dl className="details-list stagger">
               <div className="details-item"><CalendarDays size={20} strokeWidth={1.3} /><div><dt>When</dt><dd>{wedding.dateDisplay}<small>{wedding.timeDisplay}</small></dd></div></div>
-              <div className="details-item"><Church size={20} strokeWidth={1.3} /><div><dt>Ceremony</dt><dd>{wedding.ceremonyVenue}</dd></div></div>
-              <div className="details-item"><Wine size={20} strokeWidth={1.3} /><div><dt>Reception</dt><dd>{wedding.receptionVenue}</dd></div></div>
+              {wedding.ceremonyVenue === wedding.receptionVenue ? (
+                <div className="details-item"><MapPin size={20} strokeWidth={1.3} /><div><dt>Venue · Ceremony & reception</dt><dd>{wedding.ceremonyVenue}<small>{wedding.venueAddress}</small></dd></div></div>
+              ) : <>
+                <div className="details-item"><Church size={20} strokeWidth={1.3} /><div><dt>Ceremony</dt><dd>{wedding.ceremonyVenue}</dd></div></div>
+                <div className="details-item"><Wine size={20} strokeWidth={1.3} /><div><dt>Reception</dt><dd>{wedding.receptionVenue}</dd></div></div>
+                {wedding.venueAddress && <div className="details-item"><MapPin size={20} strokeWidth={1.3} /><div><dt>Address</dt><dd>{wedding.venueName}<small>{wedding.venueAddress}</small></dd></div></div>}
+              </>}
               <div className="details-item"><Shirt size={20} strokeWidth={1.3} /><div><dt>Attire</dt><dd>{wedding.dressCode}</dd></div></div>
             </dl>
             {(wedding.venueAddress || wedding.dateISO) && (
               <div className="invite-actions">
-                {wedding.venueAddress && <a className="outline-button" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(wedding.venueAddress)}`}><MapPin size={16} /> Directions</a>}
+                {wedding.venueAddress && <a className="outline-button" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${wedding.venueName}, ${wedding.venueAddress}`)}`}><MapPin size={16} /> Directions</a>}
                 {wedding.dateISO && <button type="button" className="outline-button" onClick={downloadCalendar}><CalendarPlus size={16} /> Add to calendar</button>}
               </div>
             )}
@@ -338,6 +375,14 @@ export default function Home() {
         <GiftGuide />
       </section>
 
+      <section className="panel guide-panel" id="notes">
+        <div className="guide-heading">
+          <p className="eyebrow reveal">Guest notes</p>
+          <SplitTitle className="display-title centered" lines={["Good to", "*know.*"]} />
+        </div>
+        <GuestNotes />
+      </section>
+
       <section className="panel rsvp-panel" id="rsvp">
         <div className="reveal rsvp-wrap">
           <div className="rsvp-card">
@@ -345,7 +390,7 @@ export default function Home() {
             <h2 className="rsvp-title">Will you join<br /><i>our forever?</i></h2>
             <p className="rsvp-intro">We would be honored to celebrate this unforgettable day with you.</p>
             <div className="rsvp-rule" />
-            <RsvpForm />
+            <RsvpForm key={invite?.code ?? "open"} invite={invite} />
             <p className="rsvp-deadline">{wedding.rsvpDeadline}</p>
           </div>
         </div>
@@ -357,13 +402,18 @@ export default function Home() {
           <SplitTitle className="closing-forever" lines={["The best is", "*yet to come.*"]} />
           <p className="closing-names reveal">{wedding.names.first} <span>&</span> {wedding.names.second}</p>
           <div className="ornamental-line reveal"><span /></div>
-          <p className="closing-tag reveal">{wedding.hashtag}</p>
+          <div className="reveal">
+            <button type="button" className="closing-tag" onClick={copyHashtag} aria-label={`Copy hashtag ${wedding.hashtag}`}>
+              {wedding.hashtag} {copied ? <Check size={14} /> : <Copy size={14} />}
+            </button>
+            <p className="closing-hint" role="status">{copied ? "Copied! Use it when you post." : "Tap to copy our hashtag"}</p>
+          </div>
         </div>
       </section>
 
       <footer className="page-footer">
         <span>Made with love · E & J</span>
-        <span>Photos · The Ilaya Project</span>
+        <span>Photos · <a className="footer-link" href="https://www.facebook.com/hilwayportraits" target="_blank" rel="noopener noreferrer">Hilways Portraits</a></span>
       </footer>
     </div>
   </main>;

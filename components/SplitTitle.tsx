@@ -13,7 +13,7 @@ export default function SplitTitle({ lines, className = "", as: Tag = "h2" }: Pr
             const isItalic = italic;
             if (word.endsWith("*")) italic = false;
             const clean = word.replace(/\*/g, "");
-            return <span className="split-word" key={wi}><span className="split-inner">{isItalic ? <i>{clean}</i> : clean}</span></span>;
+            return <span className={isItalic ? "split-word split-script" : "split-word"} key={wi}><span className="split-inner">{isItalic ? <i>{clean}</i> : clean}</span></span>;
           })}
         </span>
       ))}

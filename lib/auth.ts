@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 
-/** Admin login for /admin. Credentials and the signing secret come from .env.local, never from code. */
+/** Admin login for /admin. Credentials and the signing secret come from .env, never from code. */
 export const SESSION_COOKIE = "ej_admin";
 export const SESSION_DAYS = 7;
 
@@ -11,7 +11,7 @@ const same = (a: string, b: string) => timingSafeEqual(digest(a), digest(b)); //
 
 function secret() {
   const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error("SESSION_SECRET must be set in .env.local (32+ characters)");
+  if (!s || s.length < 32) throw new Error("SESSION_SECRET must be set in .env (32+ characters)");
   return s;
 }
 

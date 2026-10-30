@@ -1,21 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { wedding } from "@/lib/wedding";
+import { wedding, weddingEndsAt } from "@/lib/wedding";
 
 export default function Countdown() {
-  const [remaining, setRemaining] = useState<number | null>(null);
+  const [now, setNow] = useState<number | null>(null);
+  const target = new Date(wedding.dateISO).getTime();
   useEffect(() => {
-    if (!wedding.dateISO) return;
-    const target = new Date(wedding.dateISO).getTime();
     if (Number.isNaN(target)) return;
-    const tick = () => setRemaining(Math.max(0, target - Date.now()));
+    const tick = () => setNow(Date.now());
     tick();
     const id = window.setInterval(tick, 1000);
     return () => window.clearInterval(id);
-  }, []);
+  }, [target]);
 
-  if (remaining === null) return (
+  if (now === null) return (
     <div className="countdown-pending glass">
       <span className="eyebrow">Save the date</span>
       <strong>Coming soon</strong>
@@ -23,14 +22,23 @@ export default function Countdown() {
     </div>
   );
 
-  if (remaining === 0) return (
+  if (now >= weddingEndsAt) return (
     <div className="countdown-pending glass">
       <span className="eyebrow">{wedding.dateDisplay}</span>
-      <strong>The day is here</strong>
-      <p>Thank you for celebrating with us.</p>
+      <strong>Thank you</strong>
+      <p>For celebrating with us and making our day complete.</p>
     </div>
   );
 
+  if (now >= target) return (
+    <div className="countdown-pending glass">
+      <span className="eyebrow">{wedding.dateDisplay}</span>
+      <strong>The day is here</strong>
+      <p>See you at {wedding.venueName}.</p>
+    </div>
+  );
+
+  const remaining = target - now;
   const units: [number, string][] = [
     [Math.floor(remaining / 86400000), "Days"],
     [Math.floor((remaining / 3600000) % 24), "Hours"],

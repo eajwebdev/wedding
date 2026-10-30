@@ -5,16 +5,21 @@ export const wedding = {
   dateISO: "2026-12-26T15:00:00+08:00", // Drives the countdown and "Add to calendar" (+08:00 = Philippine time); empty = To be announced
   dateDisplay: "Saturday, December 26, 2026",
   timeDisplay: "Three o'clock in the afternoon",
-  ceremonyVenue: "Ceremony venue to be announced",
-  receptionVenue: "Reception venue to be announced",
-  venueAddress: "", // Optional: enables Get directions link
-  dressCode: "Formal · Gold & Royal Blue",
+  ceremonyVenue: "AC Villa Private Resort",
+  receptionVenue: "AC Villa Private Resort", // Same as ceremonyVenue = one "Venue" line on the invitation
+  venueName: "AC Villa Private Resort",
+  venueAddress: "North Poblacion, Mabinay, Negros Oriental", // Shown on the invitation; enables the Directions link and map
+  dressCode: "Formal to semi-formal · Any shade of blue",
   hashtag: "#EdwinAndJochel",
-  rsvpDeadline: "RSVP details to follow",
+  rsvpDeadline: "Kindly reply by December 1, 2026",
+  openRsvpMaxGuests: 5, // Seats a guest can pick without a personal invite link (links set their own seats in /admin)
   musicSrc: "", // Optional: e.g. "/audio/our-song.mp3" — adds a sound toggle and plays after "Open invitation"
   panoramaSrc: "", // Optional: a 360° equirectangular photo (2:1, e.g. from a drone or 360 camera) shown around the 3D gallery
   note: "With grateful hearts and the people we love, we begin our forever.",
 } as const;
+
+/** Replies close the day after the wedding; the countdown also switches to a thank-you then. */
+export const weddingEndsAt = new Date(wedding.dateISO).getTime() + 86400000;
 
 /** `focus` is where the couple are, as [x, y] from the photo's top-left (0–1). Screens that crop the photo
  *  (phones for wide shots, desktops for tall ones) keep that point in view instead of the photo's centre. */
@@ -44,7 +49,7 @@ export const galleryPhotos = [
 
 /** Color motif — Gold and Royal Blue, with lighter and deeper shades of each. Change names/hex codes to your final swatches. */
 export const colorMotif = {
-  intro: "Our colors are Gold and Royal Blue — the warmth of gold for a love that shines, the depth of royal blue for a promise that lasts.",
+  intro: "Our colors are Gold and Royal Blue: the warmth of gold for a love that shines, the depth of royal blue for a promise that lasts.",
   palette: [
     { name: "Royal Blue", hex: "#1F3FA0", note: "Our main color" },
     { name: "Midnight Royal", hex: "#14245E", note: "The deepest shade of blue" },
@@ -54,31 +59,44 @@ export const colorMotif = {
     { name: "Antique Gold", hex: "#9C7A3C", note: "A rich, deep gold" },
   ],
   attire: [
-    { role: "Principal sponsors", detail: "Gentlemen in Barong Tagalog with black slacks. Ladies in a Filipiniana or long gown in Gold or Champagne Gold." },
+    { role: "Principal sponsors", detail: "Formal to semi-formal attire in any shade of blue." },
     { role: "Entourage", detail: "Bridesmaids in Royal Blue long gowns. Groomsmen in Royal Blue or Midnight Royal suits with a Gold tie." },
-    { role: "Guests", detail: "Formal attire in Royal Blue, Gold, or any shade of either. Gentlemen in long sleeves or barong; ladies in a dress or gown." },
+    { role: "Guests", detail: "Formal to semi-formal attire in any shade of blue." },
   ],
-  avoid: "Kindly avoid white, ivory and cream — we'd love to save those for the bride.",
+  avoid: "Kindly avoid white. We'd love to save it for the bride.",
 };
 
-/** Program of the day. Times assume the 3:00 PM ceremony; adjust to your final schedule. `icon` matches lucide icons in app/page.tsx. */
+/** Program of the day, in order. Only the ceremony shows a time; an empty `time` hides it. `icon` matches the icons in components/ProgramTimeline.tsx. */
 export const program = [
-  { time: "2:30 PM", title: "Guest arrival", detail: "Find your seat and settle in as the sun begins to dip.", icon: "door" },
-  { time: "3:00 PM", title: "Wedding ceremony", detail: "Edwin and Jochel exchange their vows.", icon: "church" },
-  { time: "4:00 PM", title: "Family & entourage photos", detail: "Stay close — we'd love a picture with you.", icon: "camera" },
-  { time: "5:00 PM", title: "Cocktail hour", detail: "Light bites and drinks at golden hour.", icon: "wine" },
-  { time: "6:00 PM", title: "Reception & grand entrance", detail: "The newlyweds are introduced for the first time.", icon: "sparkles" },
-  { time: "6:30 PM", title: "Dinner", detail: "A shared table with the people we love.", icon: "utensils" },
-  { time: "7:30 PM", title: "First dance & toasts", detail: "Messages from our family and friends.", icon: "music" },
-  { time: "8:00 PM", title: "Cake cutting & money dance", detail: "A sweet slice and a Filipino tradition of blessings.", icon: "cake" },
-  { time: "9:00 PM", title: "Party & send-off", detail: "One last dance under the stars.", icon: "moon" },
+  { time: "3:00 PM", title: "Wedding ceremony", icon: "rings" },
+  { time: "", title: "Banquet guest arrival", icon: "car" },
+  { time: "", title: "Host introduction", icon: "mic" },
+  { time: "", title: "Couple's entrance & acknowledgement of sponsors and parents", icon: "heart" },
+  { time: "", title: "Prayer & wedding dinner", icon: "utensils" },
+  { time: "", title: "Cake cutting & wine toast", icon: "cake" },
+  { time: "", title: "First dance & bouquet toss", icon: "music" },
+  { time: "", title: "Games", icon: "puzzle" },
+  { time: "", title: "Speeches & tributes", icon: "message" },
+  { time: "", title: "Winners & prizes", icon: "trophy" },
+  { time: "", title: "Group photo", icon: "camera" },
+  { time: "", title: "Closing remarks", icon: "wine" },
 ] as const;
+
+/** Guest notes (FAQ). Add, remove or reword freely; each one is a tap-to-open question. */
+export const faq = [
+  { q: "How do we get there?", a: "AC Villa Private Resort is in North Poblacion, Mabinay, Negros Oriental, about 2 hours by car from Dumaguete City. Use the map above or tap Directions for turn-by-turn navigation." },
+  { q: "What time should we arrive?", a: "The ceremony begins at 3:00 PM, so please arrive a little early to find your seat. The reception follows right after." },
+  { q: "Can I bring a plus-one?", a: "Our celebration is intimate, so we have reserved seats for each invitation. Your personal invitation link shows how many seats are saved for you." },
+  { q: "Are children welcome?", a: "We love your little ones! Please include them in your guest count when you RSVP." },
+  { q: "What should I wear?", a: "Formal to semi-formal attire in any shade of blue. Kindly avoid white. See the color motif above for ideas." },
+  { q: "What if I can no longer attend?", a: "Life happens. Just open your invitation link again and update your RSVP so we can plan our seating." },
+];
 
 /** Gift guide. Add account details (e.g. GCash / bank) to `accounts` to show them; empty = hidden. */
 export const gifts = {
   intro: "Your presence on our wedding day is the greatest gift of all. Should you wish to bless us further, here are a few ideas.",
   items: [
-    { title: "Monetary gift", detail: "A blessing toward building our first home together — the most helpful gift for us.", icon: "envelope" },
+    { title: "Monetary gift", detail: "A blessing toward building our first home together, the most helpful gift for us.", icon: "envelope" },
     { title: "Honeymoon fund", detail: "Help us make memories on our first trip as husband and wife.", icon: "plane" },
     { title: "Home essentials", detail: "Kitchen and home pieces for the life we're starting.", icon: "home" },
     { title: "Prayers & wishes", detail: "Words of love and advice we can keep and read for years to come.", icon: "heart" },
