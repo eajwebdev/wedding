@@ -377,7 +377,7 @@ export default function CinematicCanvas({ state, onReady }: Props) {
     let frame = 0;
     let lastSegment = -1;
     let firstFrame = true;
-    let emblemInDom = false;
+    let handedOffAt = 0;
     let visibleDoc = !document.hidden;
     const onVisibility = () => {
       visibleDoc = !document.hidden;
@@ -423,10 +423,19 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       dust.rotation.y = motion.x * 0.12;
       dust.rotation.x = -motion.y * 0.08;
 
-      // Medallion follows its placeholder, with an inertial glide between gate and hero.
-      const onScreen = anchor();
-      if (!placed && targetScale > 0 && onScreen) { medallion.position.copy(target); medallion.scale.setScalar(targetScale); placed = true; }
       const sinceOpen = s.opened ? (performance.now() - s.openedAt) / 2200 : 0;
+      // The 3D emblem is for the gate and the opening spin. Then the hero's own <img> takes over for good: it is as
+      // sharp as the original artwork and scrolls natively (a canvas can't keep step with scrolling on phones).
+      if (!handedOffAt && s.opened && (sinceOpen >= 1 || Math.abs(window.scrollY) >= 1)) {
+        handedOffAt = performance.now();
+        document.documentElement.classList.add("emblem-dom");
+      }
+      // Stays underneath while the <img> fades in over it, unless the page is already moving.
+      const emblemGone = handedOffAt > 0 && (Math.abs(window.scrollY) >= 1 || performance.now() - handedOffAt > 700);
+
+      // Medallion follows its placeholder, with an inertial glide between gate and hero.
+      const onScreen = !emblemGone && anchor();
+      if (!placed && targetScale > 0 && onScreen) { medallion.position.copy(target); medallion.scale.setScalar(targetScale); placed = true; }
       // Glides only for the gate → hero move; after that it sits on its placeholder, or it trails the page while scrolling.
       const glide = sinceOpen >= 1 ? 1 : 0.12;
       medallion.position.lerp(target, glide);
@@ -437,11 +446,7 @@ export default function CinematicCanvas({ state, onReady }: Props) {
       const sway = s.opened ? Math.min(sinceOpen, 1) : 1; // no sway while the opening spin plays
       medallion.rotation.y = spin + (Math.sin(t * 0.5) * 0.06 + motion.x * 0.1) * sway;
       medallion.rotation.x = (Math.sin(t * 0.37) * 0.03 - motion.y * 0.07) * sway;
-      // A canvas can't move in step with native scrolling (on phones it shakes), so once the page leaves the top
-      // the hero's own <img> takes over, and the 3D emblem returns when the guest scrolls back up.
-      const scrolled = s.opened && Math.abs(window.scrollY) >= 1;
-      if (scrolled !== emblemInDom) { emblemInDom = scrolled; document.documentElement.classList.toggle("emblem-dom", scrolled); }
-      medallion.visible = onScreen && faceMaterial.map !== null && !scrolled;
+      medallion.visible = onScreen && faceMaterial.map !== null;
       halo.visible = medallion.visible;
       halo.position.set(medallion.position.x, medallion.position.y, -0.4);
       halo.scale.setScalar(sc * (1.5 + Math.sin(t * 0.8) * 0.06));

@@ -34,7 +34,12 @@ img{max-width:100%;display:block}
 .cinematic-webgl{z-index:-3;overflow:hidden}
 .cinematic-webgl canvas{display:block;width:100%!important;height:100%!important}
 .webgl-on .medallion-fallback{opacity:0}
-.webgl-on.emblem-dom .monogram-holder .medallion-fallback{opacity:1;transition:none} /* scrolling: the <img> scrolls natively, the canvas emblem can't */
+/* After the opening spin the hero emblem is the <img> (full sharpness, native scrolling), with the 3D emblem's halo */
+.webgl-on.emblem-dom .monogram-holder .medallion-fallback{opacity:1;filter:none}
+.emblem-tilt{display:block;width:100%;height:100%;perspective:700px}
+.medallion-halo.hero-halo{inset:-25%;pointer-events:none;opacity:0;mix-blend-mode:plus-lighter;background:radial-gradient(circle closest-side,rgba(255,214,150,.32),rgba(240,190,110,.1) 40%,rgba(240,190,110,0));transition:opacity .6s;animation:halo-pulse 7.85s ease-in-out infinite}
+.emblem-dom .medallion-halo.hero-halo{opacity:1}
+@keyframes halo-pulse{50%{transform:scale(1.04)}}
 .page-progress{position:fixed;top:0;left:0;right:0;height:2px;z-index:80}
 .page-progress>div{height:100%;transform:scaleX(0);transform-origin:left;background:linear-gradient(90deg,var(--gold-deep),var(--gold-hi));will-change:transform}
 
@@ -121,6 +126,8 @@ img{max-width:100%;display:block}
 .wedding-label{font:500 10.5px var(--sans);letter-spacing:.38em;text-transform:uppercase;color:rgba(244,237,225,.8);margin:6px 0 0}
 .hero-names{display:flex;flex-direction:column;align-items:center;font:300 clamp(52px,15.5vw,150px)/.92 var(--serif);letter-spacing:-.04em;margin:12px 0 0}
 .hero-names em{font:400 .55em/1.1 var(--script);color:var(--gold-hi);letter-spacing:0}
+/* The foil only paints inside the text box, so make room for the J's descender and hook (margins keep the layout) */
+.hero-names .foil{padding:0 .08em .22em .12em;margin:0 -.08em -.22em -.12em}
 .hero-quote{font:italic 300 19px/1.5 var(--serif);margin:0;color:#efe8db}
 .date-chip{display:inline-flex;align-items:center;gap:8px;margin:20px 0 0;padding:9px 16px;border-radius:999px;font:600 10px var(--sans);letter-spacing:.2em;text-transform:uppercase;color:var(--gold-hi)}
 .scroll-indicator>span:first-child{display:none}
@@ -167,6 +174,7 @@ img{max-width:100%;display:block}
 .details-item dd{margin:0;font:500 19px/1.3 var(--serif);color:var(--ink)}
 .details-item dd small{display:block;font:500 12px var(--sans);letter-spacing:.04em;color:var(--ink-soft);margin-top:3px}
 .invite-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:24px}
+.calendar-tip{max-width:36ch;margin:14px auto 0;font:500 13px/1.5 var(--sans);color:var(--ink-soft);animation:fade .4s var(--ease)}
 .paper-end{font:italic 18px/1.5 var(--serif);margin:28px 0 0;color:#5f665e}
 
 /* Countdown */

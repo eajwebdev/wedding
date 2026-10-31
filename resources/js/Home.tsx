@@ -14,22 +14,28 @@ import ProgramTimeline from "@/components/ProgramTimeline";
 import ColorMotif from "@/components/ColorMotif";
 import GiftGuide from "@/components/GiftGuide";
 import GuestNotes from "@/components/GuestNotes";
-import InAppNotice from "@/components/InAppNotice";
+import InAppNotice, { chromeIntent, isInAppBrowser } from "@/components/InAppNotice";
 const CinematicCanvas = lazy(() => import("@/components/CinematicCanvas"));
 const Gallery360 = lazy(() => import("@/components/Gallery360"));
 
 const clamp = (v: number, min = -1, max = 1) => Math.min(max, Math.max(min, v));
 
-function addToCalendar() {
-  const start = new Date(wedding.dateISO);
-  if (Number.isNaN(start.getTime())) return;
-  const end = new Date(start.getTime() + 6.5 * 3600000); // 3:00 PM ceremony to just after the 9:00 PM closing remarks
+/** Opens the guest's calendar with the wedding filled in; returns a tip to show when this browser can't. */
+function addToCalendar(): string | null {
+  const ceremony = new Date(wedding.dateISO);
+  if (Number.isNaN(ceremony.getTime())) return null;
+  // 2:00 PM guest arrival (an hour before the 3:00 PM ceremony) to the 6:00 PM closing remarks
+  const start = new Date(ceremony.getTime() - 3600000);
+  const end = new Date(ceremony.getTime() + 3 * 3600000);
   const isApple = /iPhone|iPad|iPod|Macintosh/i.test(navigator.userAgent)
     || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const inApp = isInAppBrowser();
 
   if (isApple) {
+    // Messenger / Facebook / Instagram on iPhone can't open calendar files; Safari opens Apple Calendar's add screen.
+    if (inApp) return "To add it to your calendar, open this invitation in Safari: tap the ··· menu, then Open in browser.";
     window.location.assign("/edwin-jochel-wedding.ics");
-    return;
+    return null;
   }
 
   const stamp = (date: Date) => date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -44,7 +50,10 @@ function addToCalendar() {
     location,
     ctz: "Asia/Manila",
   });
-  window.location.assign(`https://calendar.google.com/calendar/render?${params.toString()}`);
+  const google = `https://calendar.google.com/calendar/render?${params.toString()}`;
+  // Google won't let guests sign in inside an app's browser, so Android in-app browsers hand the link to Chrome.
+  window.location.assign(inApp && /Android/i.test(navigator.userAgent) ? chromeIntent(google) : google);
+  return null;
 }
 
 export default function Home() {
@@ -59,6 +68,7 @@ export default function Home() {
   const [playing, setPlaying] = useState(false);
   const [invite, setInvite] = useState<InviteInfo | null>(null);
   const [copied, setCopied] = useState(false);
+  const [calendarTip, setCalendarTip] = useState<string | null>(null);
   const onReady = useCallback(() => setReady(true), []);
 
   // A personal link (/?invite=CODE) fills in the guest's name and seats.
@@ -274,7 +284,10 @@ export default function Home() {
         <div className="hero-content">
           <p className="eyebrow hero-reveal">A love written by the sea</p>
           <div className="monogram-holder" data-medallion="hero">
-            <img className="medallion-fallback" src="/images/ej-logo-512.png" alt="Gold E and J monogram framed by ornate filigree" />
+            <span className="medallion-halo hero-halo" aria-hidden="true" />
+            <span className="emblem-tilt">
+              <img className="medallion-fallback" src="/images/ej-logo.png" alt="Gold E and J monogram framed by ornate filigree" data-tilt />
+            </span>
           </div>
           <p className="wedding-label hero-reveal">The wedding of</p>
           <h1 className="hero-names hero-reveal"><span className="foil">{wedding.names.first}</span><em>&</em><span className="foil">{wedding.names.second}</span></h1>
@@ -336,9 +349,10 @@ export default function Home() {
             {(wedding.venueAddress || wedding.dateISO) && (
               <div className="invite-actions">
                 {wedding.venueAddress && <a className="outline-button" target="_blank" rel="noopener noreferrer" href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${wedding.venueName}, ${wedding.venueAddress}`)}`}><MapPin size={16} /> Directions</a>}
-                {wedding.dateISO && <button type="button" className="outline-button" onClick={addToCalendar}><CalendarPlus size={16} /> Add to calendar</button>}
+                {wedding.dateISO && <button type="button" className="outline-button" onClick={() => setCalendarTip(addToCalendar())}><CalendarPlus size={16} /> Add to calendar</button>}
               </div>
             )}
+            {calendarTip && <p className="calendar-tip" role="status">{calendarTip}</p>}
             <p className="paper-end">We cannot wait to share our special day with you.</p>
           </article>
         </div>

@@ -3,10 +3,11 @@ import { Check, Copy, ExternalLink, X } from "lucide-react";
 
 // Messenger, Facebook and Instagram open links in their own built-in browser, where WebGL, music and tilt run poorly.
 const inAppBrowser = /FBAN|FBAV|FB_IAB|FB4A|FBIOS|Messenger|Instagram/i;
+export const isInAppBrowser = () => inAppBrowser.test(navigator.userAgent);
 
-/** The same page as an Android intent that opens in Chrome (the #hash is dropped: it would break the intent syntax). */
-function chromeIntent() {
-  const { protocol, host, pathname, search } = window.location;
+/** A URL (default: this page) as an Android intent that opens in Chrome (any #hash is dropped: it would break the intent syntax). */
+export function chromeIntent(href = window.location.href) {
+  const { protocol, host, pathname, search } = new URL(href);
   return `intent://${host}${pathname}${search}#Intent;scheme=${protocol.replace(":", "")};package=com.android.chrome;end`;
 }
 
@@ -31,9 +32,8 @@ export default function InAppNotice() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    const ua = navigator.userAgent;
-    if (!inAppBrowser.test(ua)) return;
-    if (!/Android/i.test(ua)) { setKind("ios"); return; }
+    if (!isInAppBrowser()) return;
+    if (!/Android/i.test(navigator.userAgent)) { setKind("ios"); return; }
     setKind("android");
     // Try once per visit, so a blocked redirect can't loop; the button below stays as a manual way out.
     try {

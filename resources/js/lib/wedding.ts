@@ -64,10 +64,10 @@ export const colorMotif = {
   avoid: "Kindly avoid white. We'd love to save it for the bride.",
 };
 
-/** Program of the day, in order. Only the ceremony shows a time; an empty `time` hides it. `icon` matches the icons in components/ProgramTimeline.tsx. */
+/** Program of the day, in order. An empty `time` hides it. `icon` matches the icons in components/ProgramTimeline.tsx. */
 export const program = [
+  { time: "2:00 PM", title: "Guest arrival", icon: "car" },
   { time: "3:00 PM", title: "Wedding ceremony", icon: "rings" },
-  { time: "", title: "Banquet guest arrival", icon: "car" },
   { time: "", title: "Host introduction", icon: "mic" },
   { time: "", title: "Couple's entrance & acknowledgement of sponsors and parents", icon: "heart" },
   { time: "", title: "Prayer & wedding dinner", icon: "utensils" },
@@ -77,13 +77,13 @@ export const program = [
   { time: "", title: "Speeches & tributes", icon: "message" },
   { time: "", title: "Winners & prizes", icon: "trophy" },
   { time: "", title: "Group photo", icon: "camera" },
-  { time: "", title: "Closing remarks", icon: "wine" },
+  { time: "6:00 PM", title: "Closing remarks", icon: "wine" },
 ] as const;
 
 /** Guest notes (FAQ). Add, remove or reword freely; each one is a tap-to-open question. */
 export const faq = [
   { q: "How do we get there?", a: "AC Villa Private Resort is in North Poblacion, Mabinay, Negros Oriental, about 2 hours by car from Dumaguete City. Use the map above or tap Directions for turn-by-turn navigation." },
-  { q: "What time should we arrive?", a: "The ceremony begins at 3:00 PM, so please arrive a little early to find your seat. The reception follows right after." },
+  { q: "What time should we arrive?", a: "Guests arrive from 2:00 PM, and the ceremony begins at 3:00 PM. The reception follows right after, closing at about 6:00 PM." },
   { q: "Can I bring a plus-one?", a: "Our celebration is intimate, so we have reserved seats for each invitation. Your personal invitation link shows how many seats are saved for you." },
   { q: "Are children welcome?", a: "We love your little ones! Please include them in your guest count when you RSVP." },
   { q: "What should I wear?", a: "Formal to semi-formal attire in any shade of blue. Kindly avoid white. See the color motif above for ideas." },
