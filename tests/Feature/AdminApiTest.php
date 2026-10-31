@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Support\GuestList;
+use Database\Seeders\AdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdminApiTest extends TestCase
@@ -15,6 +17,7 @@ class AdminApiTest extends TestCase
     {
         parent::setUp();
         config(['wedding.admin_username' => 'admin', 'wedding.admin_password' => 'correct horse']);
+        $this->seed(AdminSeeder::class);
     }
 
     private function signedIn(): static
@@ -51,10 +54,29 @@ class AdminApiTest extends TestCase
             ->assertJsonPath('error', 'Too many attempts. Try again in 15 minutes.');
     }
 
-    public function test_nobody_can_sign_in_without_configured_credentials(): void
+    public function test_nobody_can_sign_in_without_an_admin_account(): void
     {
-        config(['wedding.admin_username' => '', 'wedding.admin_password' => '']);
+        DB::table('admins')->delete();
+        $this->postJson('/api/admin/login', ['username' => 'admin', 'password' => 'correct horse'])->assertStatus(422);
         $this->postJson('/api/admin/login', ['username' => '', 'password' => ''])->assertStatus(422);
+    }
+
+    public function test_seeder_hashes_the_password_and_updates_it_on_rerun(): void
+    {
+        $this->assertNotSame('correct horse', DB::table('admins')->value('password'));
+        $this->assertTrue(Hash::check('correct horse', DB::table('admins')->value('password')));
+
+        config(['wedding.admin_password' => 'new secret']);
+        $this->seed(AdminSeeder::class);
+        $this->assertDatabaseCount('admins', 1);
+        $this->postJson('/api/admin/login', ['username' => 'admin', 'password' => 'correct horse'])->assertStatus(422);
+        $this->postJson('/api/admin/login', ['username' => 'admin', 'password' => 'new secret'])->assertOk();
+    }
+
+    public function test_unknown_username_is_rejected(): void
+    {
+        $this->postJson('/api/admin/login', ['username' => 'root', 'password' => 'correct horse'])->assertStatus(422)
+            ->assertJson(['error' => 'Incorrect username or password.']);
     }
 
     public function test_create_invite_and_read_guest_list(): void

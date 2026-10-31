@@ -8,6 +8,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 
 /** The couple's side (/admin): sign in, see replies, manage personal invite links, download the guest list. */
@@ -46,18 +47,24 @@ class AdminController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    /** Checks the admins table (filled by `php artisan db:seed`). No rows → nobody can log in. */
     private function checkCredentials(string $username, string $password): bool
     {
-        $u = (string) config('wedding.admin_username');
-        $p = (string) config('wedding.admin_password');
-        if ($u === '' || $p === '') {
-            return false; // no admin configured → nobody can log in
+        if ($username === '' || $password === '') {
+            return false;
         }
-        // Compare fixed-length hashes and evaluate both, so a wrong username takes as long as a wrong password.
-        $okUser = hash_equals(hash('sha256', $u), hash('sha256', $username));
-        $okPass = hash_equals(hash('sha256', $p), hash('sha256', $password));
+        $hash = DB::table('admins')->where('username', $username)->value('password');
+        // Hash anyway for an unknown username, so it takes as long as a wrong password and doesn't reveal which usernames exist.
+        $ok = Hash::check($password, $hash ?? self::dummyHash());
 
-        return $okUser && $okPass;
+        return $hash !== null && $ok;
+    }
+
+    private static function dummyHash(): string
+    {
+        static $hash;
+
+        return $hash ??= Hash::make('not-an-admin-password');
     }
 
     public function logout(Request $request): JsonResponse

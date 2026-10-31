@@ -85,9 +85,18 @@ class RsvpApiTest extends TestCase
             ->assertHeader('content-type', 'text/calendar; charset=utf-8')
             ->assertHeader('content-disposition', 'attachment; filename="edwin-jochel-wedding.ics"');
 
-        $response->assertSee('DTSTART:20261226T070000Z', false)
-            ->assertSee('DTEND:20261226T133000Z', false)
+        // 2:00 PM guest arrival to the 6:00 PM closing, Philippine time (UTC+8)
+        $response->assertSee('DTSTART:20261226T060000Z', false)
+            ->assertSee('DTEND:20261226T100000Z', false)
             ->assertSee("SUMMARY:Edwin & Jochel's Wedding", false)
             ->assertSee('LOCATION:AC Villa Private Resort\\, North Poblacion\\, Mabinay\\, Negros Oriental', false);
+    }
+
+    public function test_iphones_get_the_calendar_inline_so_it_opens_calendar(): void
+    {
+        $this->withHeader('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) Mobile/15E148 Safari/604.1')
+            ->get('/edwin-jochel-wedding.ics')
+            ->assertOk()
+            ->assertHeader('content-disposition', 'inline; filename="edwin-jochel-wedding.ics"');
     }
 }

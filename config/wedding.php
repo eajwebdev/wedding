@@ -19,7 +19,7 @@ return [
     // Most seats one personal invite link can hold.
     'max_invite_seats' => 10,
 
-    // Login for /admin. Empty = nobody can sign in.
+    // The /admin account that `php artisan db:seed` saves (password hashed) into the admins table; login checks that table.
     'admin_username' => env('ADMIN_USERNAME'),
     'admin_password' => env('ADMIN_PASSWORD'),
 
