@@ -14,6 +14,7 @@ import ProgramTimeline from "@/components/ProgramTimeline";
 import ColorMotif from "@/components/ColorMotif";
 import GiftGuide from "@/components/GiftGuide";
 import GuestNotes from "@/components/GuestNotes";
+import InAppNotice from "@/components/InAppNotice";
 const CinematicCanvas = lazy(() => import("@/components/CinematicCanvas"));
 const Gallery360 = lazy(() => import("@/components/Gallery360"));
 
@@ -240,6 +241,8 @@ export default function Home() {
     <Suspense fallback={null}><CinematicCanvas state={scene} onReady={onReady} /></Suspense>
     <div className="page-progress" aria-hidden="true"><div ref={progressBar} /></div>
     {wedding.musicSrc && <audio ref={audio} src={wedding.musicSrc} loop preload="none" />}
+
+    {!opened && <InAppNotice />}
 
     {!gateGone && (
       <div className="intro-gate" aria-hidden={opened}>
